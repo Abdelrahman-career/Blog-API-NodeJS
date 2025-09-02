@@ -10,26 +10,36 @@ const signToken = id => {
     });
 };
 
-// @desc    Register a new user
-// @route   POST /api/v1/auth/signup
+/**
+ * @desc    Register a new user
+ * @route   POST /api/v1/auth/signup
+ * @access  Public
+ */
 exports.signup = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
-        
-        // 1) تشفير كلمة المرور بقوة 12 (cost factor)
+
+        // --- ✅ أفضل ممارسة: التحقق اليدوي لضمان عدم تكرار الإيميل ---
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return next(new AppError('This email is already registered.', 400));
+        }
+        // --- نهاية التحقق اليدوي ---
+
+        // تشفير كلمة المرور
         const hashedPassword = await bcrypt.hash(password, 12);
         
-        // 2) إنشاء مستخدم جديد بالكلمة المشفرة
+        // إنشاء مستخدم جديد
         const newUser = await User.create({
             name,
             email,
             password: hashedPassword
         });
 
-        // 3) إنشاء توكن للمستخدم الجديد
+        // إنشاء توكن للمستخدم الجديد
         const token = signToken(newUser._id);
 
-        // 4) حذف كلمة المرور من الـ output قبل إرسال الرد (للأمان)
+        // إخفاء كلمة المرور من الرد (للأمان)
         newUser.password = undefined;
 
         res.status(201).json({
@@ -44,27 +54,25 @@ exports.signup = async (req, res, next) => {
     }
 };
 
-// @desc    Login a user
-// @route   POST /api/v1/auth/login
+/**
+ * @desc    Login an existing user
+ * @route   POST /api/v1/auth/login
+ * @access  Public
+ */
 exports.login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        // 1) التأكد من إدخال الإيميل وكلمة المرور
         if (!email || !password) {
             return next(new AppError('Please provide email and password', 400));
         }
 
-        // 2) البحث عن المستخدم وجلب كلمة المرور معه للتحقق
         const user = await User.findOne({ email }).select('+password');
 
-        // 3) التحقق من وجود المستخدم وصحة كلمة المرور
-        // نستخدم bcrypt.compare لمقارنة الكلمة المدخلة مع الكلمة المشفرة في قاعدة البيانات
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return next(new AppError('Incorrect email or password', 401)); // 401 Unauthorized
+            return next(new AppError('Incorrect email or password', 401));
         }
 
-        // 4) إذا كان كل شيء صحيحًا، قم بإنشاء وإرسال التوكن
         const token = signToken(user._id);
 
         res.status(200).json({
