@@ -10,9 +10,15 @@ const userValidationSchema = Joi.object({
     'string.email': 'الرجاء إدخال بريد إلكتروني صالح',
     'any.required': 'حقل البريد الإلكتروني مطلوب'
   }),
-  password: Joi.string().min(6).required().messages({
-    'string.min': 'كلمة المرور يجب أن تكون على الأقل 6 أحرف',
-    'any.required': 'حقل كلمة المرور مطلوب'
+  // ✅  تعديل لجعل كلمة المرور أقوى
+  password: Joi.string()
+    .min(8) // على الأقل 8 أحرف
+    .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$')) // يجب أن تحتوي على حرف صغير، كبير، ورقم
+    .required()
+    .messages({
+      'string.min': 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+      'string.pattern.base': 'كلمة المرور يجب أن تحتوي على حرف كبير، حرف صغير، ورقم على الأقل',
+      'any.required': 'حقل كلمة المرور مطلوب'
   }),
   passwordConfirm: Joi.any().equal(Joi.ref('password')).required().messages({
     'any.only': 'تأكيد كلمة المرور لا يطابق كلمة المرور',

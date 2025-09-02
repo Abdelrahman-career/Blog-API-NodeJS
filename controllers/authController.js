@@ -3,7 +3,7 @@ const AppError = require('../utils/AppError');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// دالة مساعدة لإنشاء وإمضاء التوكن
+// دالة مساعدة لإنشاء وإمضاء التوكن (تبقى كما هي)
 const signToken = id => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
@@ -19,12 +19,25 @@ exports.signup = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
 
-        // --- ✅ أفضل ممارسة: التحقق اليدوي لضمان عدم تكرار الإيميل ---
-        const existingUser = await User.findOne({ email });
+        // --- ✅ التعديل الاحترافي: التحقق من الاسم والإيميل معًا ---
+        // نستخدم $or للبحث عن مستخدم يطابق إما الإيميل أو الاسم
+        const existingUser = await User.findOne({
+            $or: [
+                { email: email },
+                { name: name }
+            ]
+        });
+
         if (existingUser) {
-            return next(new AppError('This email is already registered.', 400));
+            // إذا وجدنا مستخدمًا، نحدد سبب التكرار لإعطاء رسالة واضحة
+            if (existingUser.email === email) {
+                return next(new AppError('هذا البريد الإلكتروني مسجل بالفعل.', 400));
+            }
+            if (existingUser.name === name) {
+                return next(new AppError('اسم المستخدم هذا مأخوذ بالفعل، الرجاء اختيار اسم آخر.', 400));
+            }
         }
-        // --- نهاية التحقق اليدوي ---
+        // --- نهاية التعديل ---
 
         // تشفير كلمة المرور
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -39,7 +52,7 @@ exports.signup = async (req, res, next) => {
         // إنشاء توكن للمستخدم الجديد
         const token = signToken(newUser._id);
 
-        // إخفاء كلمة المرور من الرد (للأمان)
+        // إخفاء كلمة المرور من الرد
         newUser.password = undefined;
 
         res.status(201).json({
@@ -60,6 +73,7 @@ exports.signup = async (req, res, next) => {
  * @access  Public
  */
 exports.login = async (req, res, next) => {
+    // ... (هذه الوظيفة تبقى كما هي بدون أي تغيير)
     try {
         const { email, password } = req.body;
 
