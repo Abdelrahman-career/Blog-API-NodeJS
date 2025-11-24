@@ -3,7 +3,7 @@ const AppError = require('../utils/AppError');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// دالة مساعدة لإنشاء وإمضاء التوكن (تبقى كما هي)
+
 const signToken = id => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_EXPIRES_IN
@@ -19,8 +19,7 @@ exports.signup = async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
 
-        // --- ✅ التعديل الاحترافي: التحقق من الاسم والإيميل معًا ---
-        // نستخدم $or للبحث عن مستخدم يطابق إما الإيميل أو الاسم
+        
         const existingUser = await User.findOne({
             $or: [
                 { email: email },
@@ -29,7 +28,7 @@ exports.signup = async (req, res, next) => {
         });
 
         if (existingUser) {
-            // إذا وجدنا مستخدمًا، نحدد سبب التكرار لإعطاء رسالة واضحة
+           
             if (existingUser.email === email) {
                 return next(new AppError('هذا البريد الإلكتروني مسجل بالفعل.', 400));
             }
